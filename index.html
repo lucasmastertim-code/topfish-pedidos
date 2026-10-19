@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Top Fish - Gestão de Pedidos & Comissões</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --primary: #1e3a8a;
+      --primary-hover: #1d4ed8;
+      --success: #15803d;
+      --success-hover: #16a34a;
+      --danger: #b91c1c;
+      --danger-hover: #dc2626;
+      --warning: #d97706;
+      --warning-hover: #f59e0b;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --border: #cbd5e1;
+      --text: #0f172a;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); padding: 15px; }
+    
+    .container { max-width: 900px; margin: 0 auto; }
+    
+    header { text-align: center; margin-bottom: 20px; }
+    header h1 { color: var(--primary); font-size: 1.5rem; }
+    header p { color: #64748b; font-size: 0.9rem; }
+
+    /* Navegação por Abas */
+    .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+    .tab-btn {
+      flex: 1; padding: 12px; border: none; background: #e2e8f0; color: #475569;
+      font-weight: bold; border-radius: 8px; cursor: pointer; transition: 0.2s;
+    }
+    .tab-btn.active { background: var(--primary); color: white; }
+
+    /* Conteúdo das Abas */
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    .card { background: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin-bottom: 20px; }
+    .card h2 { font-size: 1.2rem; color: var(--primary); margin-bottom: 15px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
+
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 15px; }
+    .form-group { display: flex; flex-direction: column; }
+    .form-group label { font-size: 0.85rem; font-weight: 600; color: #334155; margin-bottom: 4px; }
+    .form-group input, .form-group select, .form-group textarea {
+      padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.95rem; outline: none; background: #fff;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--primary); }
+
+    /* Área de Leitura Automática */
+    .reader-box { background: #f0fdf4; border: 2px dashed var(--success); padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+    .reader-box p { font-size: 0.85rem; color: #166534; margin-bottom: 8px; font-weight: bold; }
+
+    /* Resumo Financeiro */
+    .financial-summary {
+      display: flex; justify-content: space-between; background: #f1f5f9; padding: 15px;
+      border-radius: 8px; font-weight: bold; margin-bottom: 15px; border-left: 4px solid var(--primary);
+    }
+    .financial-summary div span { color: var(--primary); font-size: 1.1rem; }
+
+    /* Consolidado do Histórico */
+    .dashboard-consolidado {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px;
+    }
+    .dash-box {
+      background: #f8fafc; border: 1px solid var(--border); padding: 15px; border-radius: 8px; text-align: center;
+    }
+    .dash-box p { font-size: 0.8rem; color: #64748b; font-weight: bold; text-transform: uppercase; margin-bottom: 5px; }
+    .dash-box h3 { font-size: 1.2rem; color: var(--primary); }
+
+    /* Painel de Fechamento */
+    .closing-panel { background: #eff6ff; border: 1px solid #bfdbfe; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+    .closing-panel p { font-size: 0.9rem; color: #1e40af; margin-bottom: 8px; font-weight: bold; }
+
+    /* Filtros Avançados */
+    .filters-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+    @media (max-width: 768px) { .filters-grid { grid-template-columns: 1fr; } }
+    .filter-input { padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem; outline: none; background: #fff; }
+
+    /* Botões de Ação */
+    .actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .btn {
+      padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 8px; color: white; transition: 0.2s;
+    }
+    .btn-copy { background-color: var(--primary); }
+    .btn-copy:hover { background-color: var(--primary-hover); }
+    .btn-save { background-color: var(--success); }
+    .btn-save:hover { background-color: var(--success-hover); }
+    .btn-excel { background-color: #0d9488; font-size: 0.9rem; padding: 10px 14px; }
+    .btn-excel:hover { background-color: #0f766e; }
+    .btn-closing { background-color: #2563eb; font-size: 0.9rem; padding: 10px 14px; }
+    .btn-closing:hover { background-color: #1d4ed8; }
+    .btn-whatsapp-multi { background-color: #16a34a; font-size: 0.85rem; padding: 10px 12px; }
+    .btn-whatsapp-multi:hover { background-color: #15803d; }
+    .btn-cancel-multi { background-color: var(--danger); font-size: 0.85rem; padding: 10px 12px; }
+    .btn-cancel-multi:hover { background-color: var(--danger-hover); }
+    .btn-ai { background-color: #7c3aed; margin-top: 8px; width: 100%; }
+    .btn-ai:hover { background-color: #6d28d9; }
+    .btn-cancel { background-color: #64748b; display: none; }
+
+    .hist-header { display: flex; gap: 10px; align-items: center; margin-bottom: 15px; flex-wrap: wrap; justify-content: flex-end; }
+
+    .history-card, .closing-card {
+      background: white; border: 1px solid var(--border); border-radius: 8px; padding: 15px; margin-bottom: 12px;
+      display: flex; flex-direction: column; gap: 8px; position: relative;
+    }
+    .closing-card { background: #f8fafc; border-left: 4px solid #2563eb; }
+    .history-card-top { display: flex; align-items: flex-start; gap: 10px; }
+    .history-card input[type="checkbox"] { width: 18px; height: 18px; margin-top: 3px; cursor: pointer; accent-color: var(--primary); }
+    .history-card-content, .closing-card-content { flex: 1; }
+    
+    .history-card .header-info, .closing-card .header-info { display: flex; justify-content: space-between; font-weight: bold; color: var(--primary); }
+    .history-card .details, .closing-card .details { font-size: 0.9rem; color: #334155; }
+    
+    .card-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 5px; flex-wrap: wrap; }
+    .btn-action {
+      padding: 6px 12px; color: white; border: none; border-radius: 4px; font-size: 0.8rem; cursor: pointer; font-weight: bold;
+    }
+    .btn-action.copy { background: var(--primary); }
+    .btn-action.copy:hover { background: var(--primary-hover); }
+    .btn-action.duplicar { background: #0284c7; }
+    .btn-action.duplicar:hover { background: #0369a1; }
+    .btn-action.edit { background: var(--warning); }
+    .btn-action.edit:hover { background: var(--warning-hover); }
+    .btn-action.delete { background: var(--danger); }
+    .btn-action.delete:hover { background: var(--danger-hover); }
+    .btn-action.download { background: #0d9488; }
+    .btn-action.download:hover { background: #0f766e; }
+
+    /* Notificação Toast */
+    #toast {
+      visibility: hidden; min-width: 280px; background-color: #15803d; color: #fff; text-align: center;
+      border-radius: 8px; padding: 14px; position: fixed; z-index: 1000; left: 50%; bottom: 30px;
+      transform: translateX(-50%); font-size: 1rem; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+    #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
+
+    @keyframes fadein { from { bottom: 0; opacity: 0; } to { bottom: 30px; opacity: 1; } }
+    @keyframes fadeout { from { bottom: 30px; opacity: 1; } to { bottom: 0; opacity: 0; } }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <h1>Top Fish - Gestão de Pedidos & Comissões</h1>
+      <p>Representação Comercial (Sincronizado na Nuvem)</p>
+    </header>
+
+    <!-- Navegação por Abas -->
+    <div class="tabs">
+      <button class="tab-btn active" id="tab-btn-novo" onclick="switchTab('novo-pedido')">📝 Novo Pedido</button>
+      <button class="tab-btn" id="tab-btn-hist" onclick="switchTab('historico')">📚 Histórico & Fechamentos</button>
+    </div>
+
+    <!-- ABA 1: NOVO / EDITAR PEDIDO -->
+    <div id="novo-pedido" class="tab-content active">
+      <div class="card">
+        
+        <!-- Área de Leitura Automática do WhatsApp -->
+        <div class="reader-box">
+          <p>🤖 Transcrição Inteligente WhatsApp (IA)</p>
+          <textarea id="rawWhatsappText" rows="5" placeholder="Cole aqui qualquer mensagem do Zap..."></textarea>
+          <button class="btn btn-ai" onclick="processarTextoInteligente()">⚡ Transcrever e Preencher Pedido</button>
+        </div>
+
+        <h2 id="formTitle">Dados do Cliente & Controle</h2>
+        <input type="hidden" id="editPedidoId" value="">
+        
+        <!-- Busca Inteligente / Seleção de Cliente -->
+        <div style="background: #e0f2fe; border: 1px solid #bae6fd; padding: 12px; border-radius: 8px; margin-bottom: 15px;">
+          <label style="font-size: 0.85rem; font-weight: bold; color: #0369a1; display: block; margin-bottom: 5px;">⚡ Buscar ou Digitar Cliente (Autocompletar Inteligente):</label>
+          <input list="listaClientesCache" id="inputBuscaCliente" class="filter-input" style="width: 100%; font-weight: bold; color: var(--primary);" placeholder="Comece a digitar (ex: Esquina, Mineiro, Koichi)..." oninput="verificarClienteDigitado(this)" onchange="verificarClienteDigitado(this)">
+          <datalist id="listaClientesCache"></datalist>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Número do Pedido *</label>
+            <input type="text" id="numPedido" readonly style="background-color: #f1f5f9; font-weight: bold; color: var(--primary);">
+          </div>
+          <div class="form-group">
+            <label>Data do Pedido (Lançamento) *</label>
+            <input type="date" id="dataLancamento" required>
+          </div>
+          <div class="form-group">
+            <label>Nome Fantasia *</label>
+            <input type="text" id="clienteNomeFantasia" placeholder="Ex: Sabor e Prosa, Koichi" required oninput="sincronizarNomeFantasia(this)">
+          </div>
+          <div class="form-group">
+            <label>Razão Social *</label>
+            <input type="text" id="clienteRazaoSocial" placeholder="Ex: Sabor e Prosa LTDA" required>
+          </div>
+          <div class="form-group">
+            <label>CNPJ / CPF *</label>
+            <input type="text" id="clienteCNPJ" placeholder="00.000.000/0000-00" required>
+          </div>
+        </div>
+
+        <h2>Logística & Agendamento de Entrega</h2>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Endereço de Entrega *</label>
+            <input type="text" id="clienteEndereco" placeholder="Rua, número, bairro, cidade" required>
+          </div>
+          <div class="form-group">
+            <label>Data de Entrega *</label>
+            <input type="text" id="dataEntrega" placeholder="Ex: Terça-feira, Amanhã" required>
+          </div>
+          <div class="form-group">
+            <label>Horário / Escala de Recebimento *</label>
+            <input type="text" id="horarioRecebimento" placeholder="Ex: Entrega normal, 08h" required>
+          </div>
+          <div class="form-group">
+            <label>Condição de Pagamento / Prazo *</label>
+            <input type="text" id="prazoPagamento" placeholder="Ex: Cartão, 14 dias" required>
+          </div>
+        </div>
+
+        <h2>Item do Pedido & Comissão</h2>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Produto (Código Top Fish) *</label>
+            <select id="produtoSelect" onchange="atualizarPrecoTabela()">
+              <option value="6" data-nome="Tilápia drenada IQF" data-preco="39.30" selected>[Cod 6] Tilápia drenada IQF (R$ 39,30)</option>
+              <option value="11" data-nome="Tilápia 10% IQF" data-preco="37.30">[Cod 11] Tilápia 10% IQF (R$ 37,30)</option>
+              <option value="22" data-nome="Tilápia 20% IQF" data-preco="35.30">[Cod 22] Tilápia 20% IQF (R$ 35,30)</option>
+              <option value="0" data-nome="Filé de Tilápia Premium" data-preco="40.30">[Cod 0] Filé de Tilápia Premium (R$ 40,30)</option>
+              <option value="5" data-nome="Filé de Tilápia Drenado" data-preco="39.30">[Cod 5] Filé de Tilápia Drenado (R$ 39,30)</option>
+              <option value="10" data-nome="Filé de Tilápia 10%" data-preco="37.30">[Cod 10] Filé de Tilápia 10% (R$ 37,30)</option>
+              <option value="20" data-nome="Filé de Tilápia 20%" data-preco="35.30">[Cod 20] Filé de Tilápia 20% (R$ 35,30)</option>
+              <option value="50" data-nome="Postas de Tilápia" data-preco="24.90">[Cod 50] Postas de Tilápia (R$ 24,90)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Quantidade Total (Kg) *</label>
+            <input type="number" id="qtdKg" value="15" step="0.5" oninput="calcularValores()" required>
+          </div>
+          <div class="form-group">
+            <label>Preço de Venda (R$/Kg) *</label>
+            <input type="number" id="precoVenda" value="39.30" step="0.10" oninput="calcularValores(true)" required>
+          </div>
+          <div class="form-group">
+            <label>Tipo de Operação / Comissão *</label>
+            <select id="regraComissao" onchange="calcularValores(false)">
+              <option value="auto">Automático (4% sobre Tabela + 30% sobre Excedente)</option>
+              <option value="bonificacao">🎁 Bonificação (Descontar Valor Total da Comissão)</option>
+              <option value="3">Downgrade 3%</option>
+              <option value="2">Downgrade 2%</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Resumo em Tempo Real -->
+        <div class="financial-summary">
+          <div>Valor Total: <br><span id="resumoTotal">R$ 0,00</span></div>
+          <div>Comissão Estimada: <br><span id="resumoComissao" style="color: var(--success);">R$ 0,00</span></div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 15px;">
+          <label>Observações Adicionais (Aparece no WhatsApp)</label>
+          <textarea id="observacoes" rows="2" placeholder="Ex: Tilápia a maior possível, faturar com nota"></textarea>
+        </div>
+
+        <!-- Botões de Ação -->
+        <div class="actions-grid">
+          <button class="btn btn-copy" onclick="copiarPedidoWhatsApp()">📋 Copiar Texto Formatado (WhatsApp)</button>
+          <button class="btn btn-save" onclick="salvarPedidoHistórico()">☁️ Salvar Pedido na Nuvem</button>
+        </div>
+        <button class="btn btn-cancel" id="btnCancelarEdit" style="width: 100%; margin-top: 10px;" onclick="limparFormulario()">❌ Cancelar Edição</button>
+      </div>
+    </div>
+
+    <!-- ABA 2: HISTÓRICO DE PEDIDOS & FECHAMENTOS -->
+    <div id="historico" class="tab-content">
+      <div class="card">
+        <h2>Painel de Fechamento Periódico</h2>
+
+        <!-- PAINEL DE CONTROLE DE FECHAMENTO -->
+        <div class="closing-panel">
+          <p id="infoUltimoFechamento">📌 Último Fechamento Realizado: Nenhum registrado.</p>
+          <button class="btn btn-closing" onclick="realizarFechamentoPeriodico()">🎯 Registrar Fechamento até o Último Pedido & Exportar</button>
+        </div>
+
+        <!-- RELATÓRIO DOS ÚLTIMOS FECHAMENTOS REALIZADOS -->
+        <div style="margin-bottom: 25px;">
+          <h3 style="font-size: 1rem; color: var(--primary); margin-bottom: 10px;">📁 Histórico de Fechamentos Anteriores</h3>
+          <div id="listaFechamentosAnteriores"></div>
+        </div>
+
+        <h2>Histórico Geral de Pedidos <button onclick="sincronizarHistoricoNuvem()" style="font-size: 0.75rem; padding: 4px 8px; cursor: pointer; background: var(--primary); color: white; border: none; border-radius: 4px; margin-left: 10px;">🔄 Sincronizar Nuvem</button></h2>
+
+        <!-- APURAÇÃO / CONSOLIDADO -->
+        <div class="dashboard-consolidado">
+          <div class="dash-box">
+            <p>Qtd Pedidos</p>
+            <h3 id="dashQtd">0</h3>
+          </div>
+          <div class="dash-box">
+            <p>Total de Vendas</p>
+            <h3 id="dashVendas">R$ 0,00</h3>
+          </div>
+          <div class="dash-box">
+            <p>Comissão Total</p>
+            <h3 id="dashComissao" style="color: var(--success);">R$ 0,00</h3>
+          </div>
+        </div>
+
+        <!-- FILTROS AVANÇADOS -->
+        <div class="filters-grid">
+          <input type="text" class="filter-input" id="searchHist" placeholder="Filtrar por cliente, CNPJ ou nº do pedido..." onkeyup="renderizarHistorico()">
+          <select class="filter-input" id="filterTipo" onchange="renderizarHistorico()">
+            <option value="todos">📑 Todos os Tipos</option>
+            <option value="venda">💼 Apenas Vendas Normais</option>
+            <option value="bonificacao">🎁 Apenas Bonificações</option>
+          </select>
+          <select class="filter-input" id="filterProduto" onchange="renderizarHistorico()">
+            <option value="todos">🐟 Todos os Produtos</option>
+            <option value="6">Tilápia drenada IQF [Cod 6]</option>
+            <option value="11">Tilápia 10% IQF [Cod 11]</option>
+            <option value="22">Tilápia 20% IQF [Cod 22]</option>
+            <option value="0">Filé Premium [Cod 0]</option>
+            <option value="5">Filé Drenado [Cod 5]</option>
+            <option value="10">Filé 10% [Cod 10]</option>
+            <option value="20">Filé 20% [Cod 20]</option>
+            <option value="50">Postas [Cod 50]</option>
+          </select>
+        </div>
+        
+        <div class="hist-header">
+          <button class="btn btn-whatsapp-multi" onclick="copiarSelecionadosWhatsApp()">📲 Copiar Selecionados (Zap)</button>
+          <button class="btn btn-cancel-multi" onclick="cancelarSelecionadosWhatsApp()">🗑️ Cancelar Selecionados</button>
+          <button class="btn btn-excel" onclick="exportarExcel()">📊 Exportar Excel</button>
+        </div>
+
+        <div style="margin-bottom: 12px; font-size: 0.85rem; display: flex; align-items: center; gap: 8px;">
+          <input type="checkbox" id="selectAll" onclick="toggleSelectAll(this)" style="width: 16px; height: 16px; cursor: pointer;">
+          <label for="selectAll" style="cursor: pointer; font-weight: bold; color: #475569;">Selecionar / Desmarcar Todos os Pedidos Filtrados</label>
+        </div>
+        
+        <div id="listaHistorico"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast">Mensagem aqui</div>
+
+  <script>
+    if (!localStorage.getItem('topfish_versao_limpa_2026_v10')) {
+      localStorage.removeItem('topfish_historico');
+      localStorage.setItem('topfish_versao_limpa_2026_v10', 'true');
+    }
+
+    const URL_GOOGLE_SCRIPT = "https://script.google.com/macros/s/AKfycbw-IGRWHSSOMYJfBfk6LaZAqOk_d_PybqzwePsGgYUnaEvc5Ts8bs5Jg7fyjk-Mo19J/exec";
+
+    let historicoPedidos = (JSON.parse(localStorage.getItem('topfish_historico')) || []).map(normalizarPedido);
+    let listaFechamentos = JSON.parse(localStorage.getItem('topfish_lista_fechamentos')) || [];
+
+    function esc(v) {
+      return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+    function paraNumero(v) {
+      if (typeof v === 'number') return isFinite(v) ? v : 0;
+      let s = String(v == null ? '' : v).replace(/[^\d,.\-]/g, '');
+      if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
+      const n = parseFloat(s);
+      return isFinite(n) ? n : 0;
+    }
+    function hojeLocal() {
+      const d = new Date();
+      return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
+    function formatarData(v) {
+      const s = String(v == null ? '' : v);
+      const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      return m ? `${m[3]}/${m[2]}/${m[1]}` : (s || '—');
+    }
+    function numDoPedido(p) {
+      const m = String((p && p.numPedido) || '').match(/\d+/);
+      return m ? parseInt(m[0], 10) : 0;
+    }
+    function normalizarPedido(p) {
+      p = p || {};
+      const st = String(p.status || '');
+      const regra = p.regraComissao || (/bonif/i.test(st) ? 'bonificacao' : 'auto');
+      const qtd = paraNumero(p.qtdKg);
+      const total = paraNumero(p.total);
+      let preco = paraNumero(p.precoVenda);
+      if (!preco && qtd > 0 && total > 0) preco = Math.round(total / qtd * 100) / 100;
+      return {
+        id: p.id,
+        status: /cancel/i.test(st) ? 'Cancelado' : (st || 'VENDA NORMAL'),
+        numPedido: String(p.numPedido || ''),
+        dataLancamento: String(p.dataLancamento || ''),
+        nomeFantasia: String(p.nomeFantasia || ''),
+        razaoSocial: String(p.razaoSocial || ''),
+        cnpj: String(p.cnpj || ''),
+        endereco: String(p.endereco || ''),
+        dataEntrega: String(p.dataEntrega || ''),
+        horario: String(p.horario || ''),
+        prazo: String(p.prazo || ''),
+        codProduto: (p.codProduto === undefined || p.codProduto === null) ? '' : String(p.codProduto),
+        nomeProduto: String(p.nomeProduto || ''),
+        qtdKg: qtd,
+        precoVenda: preco,
+        regraComissao: regra,
+        total: total,
+        comissao: paraNumero(p.comissao),
+        obs: String(p.obs || '')
+      };
+    }
+
+    let pendentesNuvem = JSON.parse(localStorage.getItem('topfish_pendentes')) || [];
+    function salvarPendentes() { localStorage.setItem('topfish_pendentes', JSON.stringify(pendentesNuvem)); }
+
+    async function postarNuvem(payload) {
+      try {
+        const res = await fetch(URL_GOOGLE_SCRIPT, {
+          method: 'POST',
+          redirect: 'follow',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(payload)
+        });
+        const json = JSON.parse(await res.text());
+        return !!(json && json.result === 'success');
+      } catch (err) {
+        return false;
+      }
+    }
+    async function enviarAcao(payload) {
+      const ok = await postarNuvem(payload);
+      if (!ok) { pendentesNuvem.push(payload); salvarPendentes(); }
+      return ok;
+    }
+    async function enviarPendentes() {
+      if (!pendentesNuvem.length) return;
+      for (let i = 0; i < pendentesNuvem.length; i++) {
+        if (!(await postarNuvem(pendentesNuvem[i]))) {
+          pendentesNuvem = pendentesNuvem.slice(i);
+          salvarPendentes();
+          return;
+        }
+      }
+      pendentesNuvem = [];
+      salvarPendentes();
+    }
+
+    let sincronizando = false;
+    async function sincronizarHistoricoNuvem() {
+      if (sincronizando) return;
+      sincronizando = true;
+      mostrarToast("🔄 Sincronizando com a planilha da nuvem...");
+      try {
+        await enviarPendentes();
+        const response = await fetch(URL_GOOGLE_SCRIPT + '?t=' + Date.now(), { method: 'GET', redirect: 'follow' });
+        const textData = await response.text();
+        let dadosNuvem = JSON.parse(textData);
+
+        if (Array.isArray(dadosNuvem)) {
+          historicoPedidos = dadosNuvem.map(normalizarPedido)
+            .sort((a, b) => (numDoPedido(b) - numDoPedido(a)) || (Number(b.id) - Number(a.id)));
+          localStorage.setItem('topfish_historico', JSON.stringify(historicoPedidos));
+          if (!document.getElementById('editPedidoId').value) {
+            document.getElementById('numPedido').value = `#PED-${obterProximoNumeroPedido()}`;
+          }
+          atualizarListaClientesSelect();
+          renderizarHistorico();
+          mostrarToast(`✅ Sincronizado! ${dadosNuvem.length} registros.`);
+        }
+      } catch (err) {
+        mostrarToast("⚠️ Erro de conexão com a nuvem.");
+      } finally {
+        sincronizando = false;
+      }
+    }
+
+    function atualizarListaClientesSelect() {
+      const datalist = document.getElementById('listaClientesCache');
+      if (!datalist) return;
+      datalist.innerHTML = '';
+      const clientesUnicos = {};
+      for (let i = 0; i < historicoPedidos.length; i++) {
+        const p = historicoPedidos[i];
+        if (p && p.nomeFantasia && p.nomeFantasia.trim() !== '' && p.status !== "Cancelado") {
+          const nomeKey = p.nomeFantasia.trim();
+          clientesUnicos[nomeKey] = {
+            razaoSocial: p.razaoSocial || nomeKey,
+            cnpj: p.cnpj || clientesUnicos[nomeKey]?.cnpj || '',
+            endereco: p.endereco || clientesUnicos[nomeKey]?.endereco || '',
+            dataEntrega: p.dataEntrega || clientesUnicos[nomeKey]?.dataEntrega || '',
+            horario: p.horario || clientesUnicos[nomeKey]?.horario || '',
+            prazo: p.prazo || clientesUnicos[nomeKey]?.prazo || '14 dias'
+          };
+        }
+      }
+      for (let nome in clientesUnicos) {
+        const option = document.createElement('option');
+        option.value = nome;
+        datalist.appendChild(option);
+      }
+      window.clientesCadastradosCache = clientesUnicos;
+    }
+
+    function verificarClienteDigitado(inputEl) {
+      const nomeEscolhido = inputEl.value.trim();
+      if (!nomeEscolhido) return;
+      document.getElementById('clienteNomeFantasia').value = nomeEscolhido;
+      document.getElementById('clienteRazaoSocial').value = nomeEscolhido;
+      if (window.clientesCadastradosCache && window.clientesCadastradosCache[nomeEscolhido]) {
+        const dados = window.clientesCadastradosCache[nomeEscolhido];
+        document.getElementById('clienteRazaoSocial').value = dados.razaoSocial || nomeEscolhido;
+        document.getElementById('clienteCNPJ').value = dados.cnpj || '';
+        document.getElementById('clienteEndereco').value = dados.endereco || '';
+        if (dados.dataEntrega) document.getElementById('dataEntrega').value = dados.dataEntrega;
+        if (dados.horario) document.getElementById('horarioRecebimento').value = dados.horario;
+        if (dados.prazo) document.getElementById('prazoPagamento').value = dados.prazo;
+      } else {
+        const encontrado = historicoPedidos.find(p => p.nomeFantasia && p.nomeFantasia.toLowerCase().includes(nomeEscolhido.toLowerCase()) && p.status !== "Cancelado");
+        if (encontrado) {
+          document.getElementById('clienteRazaoSocial').value = encontrado.razaoSocial || nomeEscolhido;
+          document.getElementById('clienteCNPJ').value = encontrado.cnpj || '';
+          document.getElementById('clienteEndereco').value = encontrado.endereco || '';
+          if (encontrado.dataEntrega) document.getElementById('dataEntrega').value = encontrado.dataEntrega;
+          if (encontrado.horario) document.getElementById('horarioRecebimento').value = encontrado.horario;
+          if (encontrado.prazo) document.getElementById('prazoPagamento').value = encontrado.prazo;
+        }
+      }
+    }
+
+    function sincronizarNomeFantasia(el) {
+      const val = el.value;
+      const buscaInput = document.getElementById('inputBuscaCliente');
+      if (buscaInput && !buscaInput.value) buscaInput.value = val;
+    }
+
+    function atualizarInfoFechamentoUI() {
+      const infoEl = document.getElementById('infoUltimoFechamento');
+      if (!infoEl) return;
+      if (listaFechamentos.length > 0) {
+        const ultimo = listaFechamentos[0];
+        infoEl.innerText = `📌 Último Fechamento: Pedido ${ultimo.atePedido} em ${new Date(ultimo.dataFechamento).toLocaleDateString('pt-BR')}.`;
+      } else {
+        infoEl.innerText = `📌 Nenhum fechamento periódico registrado ainda.`;
+      }
+      renderizarListaFechamentosAnteriores();
+    }
+
+    function renderizarListaFechamentosAnteriores() {
+      const container = document.getElementById('listaFechamentosAnteriores');
+      if (!container) return;
+      container.innerHTML = '';
+      if (listaFechamentos.length === 0) {
+        container.innerHTML = '<p style="font-size: 0.85rem; color: #64748b; font-style: italic;">Nenhum fechamento registrado.</p>';
+        return;
+      }
+      listaFechamentos.forEach((f, index) => {
+        const card = document.createElement('div');
+        card.className = 'closing-card';
+        card.innerHTML = `
+          <div class="header-info">
+            <span>📁 Fechamento #${listaFechamentos.length - index} (Até ${f.atePedido})</span>
+            <span style="color: var(--success);">Comissão: R$ ${f.comissaoTotal.toFixed(2)}</span>
+          </div>
+          <div class="details">
+            <strong>Data:</strong> ${new Date(f.dataFechamento).toLocaleDateString('pt-BR')} | <strong>Qtd:</strong> ${f.qtdPedidos} | <strong>Vendas:</strong> R$ ${f.vendasTotal.toFixed(2)}
+          </div>
+          <div class="card-actions">
+            <button class="btn-action download" onclick="baixarFechamentoAntigo(${f.id})">📥 Baixar</button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function obterProximoNumeroPedido() {
+      let maiorNum = 1000;
+      historicoPedidos.forEach(p => {
+        if (p && p.numPedido) {
+          const match = p.numPedido.match(/\d+/);
+          if (match) {
+            const val = parseInt(match[0]);
+            if (val > maiorNum) maiorNum = val;
+          }
+        }
+      });
+      return maiorNum + 1;
+    }
+
+    function setHojeData() {
+      const el = document.getElementById('dataLancamento');
+      if (el && !el.value) el.value = hojeLocal();
+    }
+
+    function gerarNumPedido() {
+      const el = document.getElementById('numPedido');
+      if (el && !el.value && !document.getElementById('editPedidoId').value) {
+        el.value = `#PED-${obterProximoNumeroPedido()}`;
+      }
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      if (tabId === 'novo-pedido') {
+        document.getElementById('tab-btn-novo').classList.add('active');
+      } else {
+        document.getElementById('tab-btn-hist').classList.add('active');
+        sincronizarHistoricoNuvem();
+        atualizarInfoFechamentoUI();
+      }
+    }
+
+    async function processarTextoInteligente() {
+      const rawText = document.getElementById('rawWhatsappText').value;
+      if (!rawText.trim()) return alert("Cole o texto do WhatsApp!");
+      const lower = rawText.toLowerCase();
+      const isBonif = lower.includes('bonificação') || lower.includes('bonificacao') || lower.includes('descontar da comissao');
+
+      const cnpjMatch = rawText.match(/\b\d{2}\.?\d{3}\.?\d{3}\/?\d{4}\-?\d{2}\b|\b\d{14}\b/);
+      if (cnpjMatch) {
+        let numApenas = cnpjMatch[0].replace(/\D/g, '');
+        document.getElementById('clienteCNPJ').value = numApenas.length === 14 ? numApenas.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5") : cnpjMatch[0];
+      }
+
+      let nomeCliente = "Cliente Não Informado";
+      if (lower.includes('daruma')) nomeCliente = "Daruma";
+      else if (lower.includes('kanpai')) nomeCliente = "Kanpai";
+      else if (lower.includes('koichi')) nomeCliente = "Koichi";
+      else if (lower.includes('sabor')) nomeCliente = "Sabor e Prosa";
+
+      document.getElementById('clienteNomeFantasia').value = nomeCliente;
+      document.getElementById('clienteRazaoSocial').value = nomeCliente;
+      document.getElementById('inputBuscaCliente').value = nomeCliente;
+      verificarClienteDigitado(document.getElementById('inputBuscaCliente'));
+
+      const kgMatches = [...rawText.matchAll(/(\d+[\.,]?\d*)\s*(kg|kilos|kilo)/gi)];
+      document.getElementById('qtdKg').value = kgMatches.length > 0 ? parseFloat(kgMatches[0][1].replace(',', '.')) : 15;
+
+      const sel = document.getElementById('produtoSelect');
+      if (lower.includes('posta')) sel.value = "50";
+      else if (lower.includes('20%')) sel.value = "22";
+      else if (lower.includes('10%')) sel.value = "11";
+      else sel.value = "6";
+
+      if (isBonif) {
+        document.getElementById('regraComissao').value = 'bonificacao';
+        document.getElementById('precoVenda').value = "0.00";
+        document.getElementById('prazoPagamento').value = "Bonificação";
+        document.getElementById('observacoes').value = "🎁 BONIFICAÇÃO";
+      } else {
+        const precoMatch = rawText.match(/(\d{2}[\.,]\d{1,2})/);
+        if (precoMatch) document.getElementById('precoVenda').value = parseFloat(precoMatch[1].replace(',', '.')).toFixed(2);
+        document.getElementById('regraComissao').value = 'auto';
+        document.getElementById('observacoes').value = "";
+      }
+      calcularValores(false);
+      mostrarToast("⚡ Texto transcrito!");
+    }
+
+    function atualizarPrecoTabela() {
+      const prodSelect = document.getElementById('produtoSelect');
+      const opt = prodSelect.options[prodSelect.selectedIndex];
+      const precoPadrao = parseFloat(opt.getAttribute('data-preco')) || 39.30;
+      if (document.getElementById('regraComissao').value !== 'bonificacao') {
+        document.getElementById('precoVenda').value = precoPadrao.toFixed(2);
+      }
+      calcularValores(true);
+    }
+
+    // ===== CÁLCULO DE COMISSÃO CORRIGIDO (Spread & Downgrade exatos) =====
+    function calcularValores(ajustarRegraAuto = false) {
+      const prodSelect = document.getElementById('produtoSelect');
+      const opt = prodSelect.options[prodSelect.selectedIndex];
+      const precoTabela = parseFloat(opt.getAttribute('data-preco')) || 39.30;
+      
+      const qtd = parseFloat(document.getElementById('qtdKg').value) || 0;
+      const precoVenda = parseFloat(document.getElementById('precoVenda').value) || 0;
+      const selectRegra = document.getElementById('regraComissao');
+
+      if (ajustarRegraAuto && selectRegra.value !== 'bonificacao') {
+        if (precoVenda < precoTabela) {
+          const diferencaNegativa = precoTabela - precoVenda;
+          if (diferencaNegativa >= 2.00) {
+            selectRegra.value = '2'; // 2 reais ou mais abaixo -> 2%
+          } else {
+            selectRegra.value = '3'; // Até 1 real abaixo -> 3%
+          }
+        } else {
+          selectRegra.value = 'auto'; // Preço igual ou acima -> Automático
+        }
+      }
+
+      const regra = selectRegra.value;
+      let totalVenda = 0;
+      let comissaoCalculada = 0;
+
+      if (regra === 'bonificacao') {
+        totalVenda = 0;
+        comissaoCalculada = -(qtd * precoTabela);
+      } else {
+        totalVenda = qtd * precoVenda;
+        if (regra === '3') {
+          comissaoCalculada = totalVenda * 0.03;
+        } else if (regra === '2') {
+          comissaoCalculada = totalVenda * 0.02;
+        } else {
+          // 4% sobre a Tabela + 30% sobre o Excedente (a mais)
+          const valorTabelaTotal = qtd * precoTabela;
+          const comissaoBaseTabela = valorTabelaTotal * 0.04;
+          
+          let comissaoSpread = 0;
+          if (precoVenda > precoTabela) {
+            const diferencaPorKg = precoVenda - precoTabela;
+            comissaoSpread = (diferencaPorKg * qtd) * 0.30;
+          }
+          comissaoCalculada = comissaoBaseTabela + comissaoSpread;
+        }
+      }
+
+      document.getElementById('resumoTotal').innerText = totalVenda.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+      document.getElementById('resumoComissao').innerText = comissaoCalculada.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+      return { totalVenda, comissaoCalculada };
+    }
+
+    function gerarTextoWhatsAppUnico(item) {
+      const isBonif = item.regraComissao === 'bonificacao';
+      let msg = isBonif ? `*BONIFICAÇÃO - TOP FISH (${item.numPedido})*\n\n` : `*PEDIDO DE PESCADOS - TOP FISH (${item.numPedido})*\n\n`;
+      msg += `*Cliente:* ${item.nomeFantasia}\n\n`;
+      if (item.razaoSocial && item.razaoSocial !== item.nomeFantasia) msg += `*Razão Social:* ${item.razaoSocial}\n\n`;
+      if (item.cnpj) msg += `*CNPJ/CPF:* ${item.cnpj}\n\n`;
+      if (item.endereco) msg += `*Endereço:* ${item.endereco}\n\n`;
+      
+      if (isBonif) {
+        msg += `*Item (Cortesia):* ${item.qtdKg}kg ${item.nomeProduto} [Cód. ${item.codProduto}] (BONIFICAÇÃO)\n\n`;
+      } else {
+        msg += `*Item:* ${item.qtdKg}kg ${item.nomeProduto} [Cód. ${item.codProduto}] - R$ ${(item.precoVenda || 0).toFixed(2)}/kg\n\n`;
+      }
+      msg += `*Data Entrega:* ${item.dataEntrega || 'A combinar'}\n\n`;
+      if (item.horario) msg += `*Horário / Escala:* ${item.horario}\n\n`;
+      msg += `*Prazo / Pagamento:* ${item.prazo || 'A combinar'}\n\n`;
+      if (item.obs) msg += `*Obs:* ${item.obs}\n\n`;
+      return msg.trim();
+    }
+
+    function copiarPedidoWhatsApp() {
+      calcularValores();
+      const prodSelect = document.getElementById('produtoSelect');
+      const opt = prodSelect.options[prodSelect.selectedIndex];
+      const itemTemp = {
+        numPedido: document.getElementById('numPedido').value,
+        nomeFantasia: document.getElementById('clienteNomeFantasia').value || "Cliente Não Informado",
+        razaoSocial: document.getElementById('clienteRazaoSocial').value,
+        cnpj: document.getElementById('clienteCNPJ').value,
+        endereco: document.getElementById('clienteEndereco').value,
+        dataEntrega: document.getElementById('dataEntrega').value,
+        horario: document.getElementById('horarioRecebimento').value,
+        prazo: document.getElementById('prazoPagamento').value,
+        codProduto: prodSelect.value,
+        nomeProduto: opt.getAttribute('data-nome'),
+        qtdKg: parseFloat(document.getElementById('qtdKg').value) || 0,
+        precoVenda: parseFloat(document.getElementById('precoVenda').value) || 0,
+        regraComissao: document.getElementById('regraComissao').value,
+        obs: document.getElementById('observacoes').value
+      };
+      navigator.clipboard.writeText(gerarTextoWhatsAppUnico(itemTemp)).then(() => {
+        mostrarToast("✅ Texto formatado copiado!");
+      });
+    }
+
+    async function enviarParaGoogleSheets(dados) {
+      const ok = await enviarAcao({ action: 'salvar', ...dados });
+      mostrarToast(ok ? "☁️ Pedido salvo na nuvem!" : "⚠️ Salvo localmente (offline)");
+    }
+
+    function salvarPedidoHistórico() {
+      const dataLanc = document.getElementById('dataLancamento').value;
+      const nomeFantasia = document.getElementById('clienteNomeFantasia').value.trim();
+      const razaoSocial = document.getElementById('clienteRazaoSocial').value.trim();
+      const cnpj = document.getElementById('clienteCNPJ').value.trim();
+      const endereco = document.getElementById('clienteEndereco').value.trim();
+      const dataEntrega = document.getElementById('dataEntrega').value.trim();
+      const horario = document.getElementById('horarioRecebimento').value.trim();
+      const prazo = document.getElementById('prazoPagamento').value.trim();
+      const qtdKg = document.getElementById('qtdKg').value;
+      const precoVenda = document.getElementById('precoVenda').value;
+
+      if (!dataLanc || !nomeFantasia || !razaoSocial || !cnpj || !endereco || !dataEntrega || !horario || !prazo || !qtdKg || !precoVenda) {
+        alert("⚠️ Preencha todos os campos obrigatórios (*)");
+        return;
+      }
+
+      const editId = document.getElementById('editPedidoId').value;
+      const calc = calcularValores(false);
+      const prodSelect = document.getElementById('produtoSelect');
+      const opt = prodSelect.options[prodSelect.selectedIndex];
+      const numPed = editId ? document.getElementById('numPedido').value : `#PED-${obterProximoNumeroPedido()}`;
+
+      const dadosPedido = {
+        id: editId ? parseInt(editId) : Date.now(),
+        numPedido: numPed,
+        dataLancamento: dataLanc,
+        nomeFantasia: nomeFantasia,
+        razaoSocial: razaoSocial,
+        cnpj: cnpj,
+        endereco: endereco,
+        dataEntrega: dataEntrega,
+        horario: horario,
+        prazo: prazo,
+        codProduto: prodSelect.value,
+        nomeProduto: opt.getAttribute('data-nome'),
+        qtdKg: parseFloat(qtdKg) || 0,
+        precoVenda: parseFloat(precoVenda) || 0,
+        regraComissao: document.getElementById('regraComissao').value,
+        total: calc.totalVenda,
+        comissao: calc.comissaoCalculada,
+        obs: document.getElementById('observacoes').value,
+        status: document.getElementById('regraComissao').value === 'bonificacao' ? "BONIFICAÇÃO" : "VENDA NORMAL"
+      };
+
+      if (editId) {
+        const index = historicoPedidos.findIndex(p => p.id == parseInt(editId));
+        if (index !== -1) historicoPedidos[index] = dadosPedido;
+        mostrarToast("✏️ Pedido atualizado!");
+      } else {
+        historicoPedidos.unshift(dadosPedido);
+        mostrarToast("✅ Pedido gravado!");
+      }
+
+      localStorage.setItem('topfish_historico', JSON.stringify(historicoPedidos));
+      atualizarListaClientesSelect();
+      enviarParaGoogleSheets(dadosPedido);
+      limparFormulario();
+    }
+
+    function exportarExcel() {
+      const marcados = [...document.querySelectorAll('.pedido-checkbox:checked')].map(cb => cb.getAttribute('data-id'));
+      const base = marcados.length ? historicoPedidos.filter(p => marcados.includes(String(p.id))) : historicoPedidos;
+      if (base.filter(p => p.status !== "Cancelado").length === 0) return alert("Não há pedidos para exportar.");
+      gerarPlanilhaExcel(base, marcados.length ? "Relatorio_Comissoes_Selecionados" : "Relatorio_Comissoes_Geral");
+    }
+
+    function gerarPlanilhaExcel(pedidosArray, nomeArquivoPrefixo) {
+      const dadosExcel = pedidosArray.filter(p => p.status !== "Cancelado").map(p => {
+        const isBonif = p.regraComissao === 'bonificacao';
+        return {
+          "STATUS": isBonif ? "[ABATIMENTO DE COMISSÃO]" : "VENDA NORMAL",
+          "Data": formatarData(p.dataLancamento),
+          "Cliente": p.nomeFantasia || '',
+          "CNPJ / CPF": p.cnpj || '',
+          "Pedido / Produtos": `${p.numPedido} - ${p.qtdKg}kg ${p.nomeProduto}` + (isBonif ? ' [BONIFICAÇÃO]' : ` (R$ ${(p.precoVenda || 0).toFixed(2)}/kg)`),
+          "Valor Total (R$)": p.total || 0,
+          "Comissão (R$)": p.comissao || 0
+        };
+      });
+      const worksheet = XLSX.utils.json_to_sheet(dadosExcel);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Comissões Top Fish");
+      XLSX.writeFile(workbook, `${nomeArquivoPrefixo}_${hojeLocal()}.xlsx`);
+      mostrarToast("📊 Excel gerado com sucesso!");
+    }
+
+    function realizarFechamentoPeriodico() {
+      if (historicoPedidos.length === 0) return alert("Não há pedidos.");
+      let ultimoNumFechadoVal = 0;
+      if (listaFechamentos.length > 0) ultimoNumFechadoVal = parseInt(listaFechamentos[0].atePedido.replace(/\D/g, '')) || 0;
+
+      const pedidosParaFechar = historicoPedidos.filter(p => p.status !== "Cancelado" && numDoPedido(p) > ultimoNumFechadoVal);
+      if (pedidosParaFechar.length === 0) return alert("Não há novos pedidos desde o último fechamento!");
+
+      const ultimoPedidoLote = pedidosParaFechar.reduce((a, b) => numDoPedido(b) > numDoPedido(a) ? b : a);
+      if (confirm(`Deseja realizar o fechamento com ${pedidosParaFechar.length} novo(s) pedido(s) (até ${ultimoPedidoLote.numPedido})?`)) {
+        let somaVendas = 0, somaComissao = 0;
+        pedidosParaFechar.forEach(p => { somaVendas += (p.total || 0); somaComissao += (p.comissao || 0); });
+        
+        listaFechamentos.unshift({
+          id: Date.now(), atePedido: ultimoPedidoLote.numPedido, dataFechamento: new Date().toISOString(),
+          qtdPedidos: pedidosParaFechar.length, vendasTotal: somaVendas, comissaoTotal: somaComissao, pedidos: pedidosParaFechar
+        });
+        localStorage.setItem('topfish_lista_fechamentos', JSON.stringify(listaFechamentos));
+        gerarPlanilhaExcel(pedidosParaFechar, `Fechamento_Comissoes_${ultimoPedidoLote.numPedido}`);
+        atualizarInfoFechamentoUI();
+        mostrarToast(`🎯 Fechamento realizado até ${ultimoPedidoLote.numPedido}!`);
+      }
+    }
+
+    function baixarFechamentoAntigo(id) {
+      const f = listaFechamentos.find(x => x.id === id);
+      if (f) gerarPlanilhaExcel(f.pedidos, `Fechamento_Comissoes_${f.atePedido}`);
+    }
+
+    function duplicarPedido(id) {
+      const pedido = historicoPedidos.find(p => p.id == id);
+      if (!pedido) return;
+      document.getElementById('editPedidoId').value = '';
+      document.getElementById('numPedido').value = `#PED-${obterProximoNumeroPedido()}`;
+      document.getElementById('dataLancamento').value = hojeLocal();
+      
+      const nomeCliente = pedido.nomeFantasia || '';
+      document.getElementById('clienteNomeFantasia').value = nomeCliente;
+      document.getElementById('inputBuscaCliente').value = nomeCliente;
+      document.getElementById('clienteRazaoSocial').value = pedido.razaoSocial || nomeCliente;
+      document.getElementById('clienteCNPJ').value = pedido.cnpj || '';
+      document.getElementById('clienteEndereco').value = pedido.endereco || '';
+      document.getElementById('dataEntrega').value = pedido.dataEntrega || 'A combinar';
+      document.getElementById('horarioRecebimento').value = pedido.horario || 'Entrega normal';
+      document.getElementById('prazoPagamento').value = pedido.prazo || '14 dias';
+      
+      document.getElementById('produtoSelect').value = pedido.codProduto || '6';
+      document.getElementById('qtdKg').value = pedido.qtdKg || 15;
+      document.getElementById('precoVenda').value = pedido.precoVenda || 39.30;
+      document.getElementById('regraComissao').value = pedido.regraComissao || 'auto';
+      document.getElementById('observacoes').value = pedido.obs || '';
+
+      document.getElementById('formTitle').innerText = "📝 Novo Pedido (Duplicado)";
+      document.getElementById('btnCancelarEdit').style.display = "block";
+      switchTab('novo-pedido');
+      calcularValores(false);
+      mostrarToast("📄 Pedido duplicado!");
+    }
+
+    function editarPedido(id) {
+      const pedido = historicoPedidos.find(p => p.id == id);
+      if (!pedido) return;
+      document.getElementById('editPedidoId').value = pedido.id;
+      document.getElementById('numPedido').value = pedido.numPedido || `#PED-${pedido.id}`;
+      document.getElementById('dataLancamento').value = pedido.dataLancamento || hojeLocal();
+      
+      document.getElementById('clienteNomeFantasia').value = pedido.nomeFantasia || '';
+      document.getElementById('inputBuscaCliente').value = pedido.nomeFantasia || '';
+      document.getElementById('clienteRazaoSocial').value = pedido.razaoSocial || '';
+      document.getElementById('clienteCNPJ').value = pedido.cnpj || '';
+      document.getElementById('clienteEndereco').value = pedido.endereco || '';
+      document.getElementById('dataEntrega').value = pedido.dataEntrega || '';
+      document.getElementById('horarioRecebimento').value = pedido.horario || '';
+      document.getElementById('prazoPagamento').value = pedido.prazo || '';
+      
+      document.getElementById('produtoSelect').value = pedido.codProduto || '6';
+      document.getElementById('qtdKg').value = pedido.qtdKg || 15;
+      document.getElementById('precoVenda').value = pedido.precoVenda || 39.30;
+      document.getElementById('regraComissao').value = pedido.regraComissao || 'auto';
+      document.getElementById('observacoes').value = pedido.obs || '';
+
+      document.getElementById('formTitle').innerText = `✏️ Editando ${pedido.numPedido}`;
+      document.getElementById('btnCancelarEdit').style.display = "block";
+      switchTab('novo-pedido');
+      calcularValores(false);
+    }
+
+    function excluirPedido(id) {
+      if (confirm("Deseja cancelar este registro?")) {
+        const index = historicoPedidos.findIndex(p => p.id == id);
+        if (index !== -1) {
+          historicoPedidos[index].status = "Cancelado";
+          localStorage.setItem('topfish_historico', JSON.stringify(historicoPedidos));
+          renderizarHistorico();
+          mostrarToast("🗑️ Registro cancelado!");
+          enviarAcao({ action: 'cancelar', itens: [{ numPedido: historicoPedidos[index].numPedido, row: historicoPedidos[index].id }] });
+        }
+      }
+    }
+
+    function cancelarSelecionadosWhatsApp() {
+      const checkboxes = document.querySelectorAll('.pedido-checkbox:checked');
+      if (checkboxes.length === 0) return alert("Selecione pelo menos um pedido.");
+      if (confirm(`Deseja cancelar ${checkboxes.length} pedido(s)?`)) {
+        const itensCancelados = [];
+        checkboxes.forEach(cb => {
+          const index = historicoPedidos.findIndex(p => p.id == cb.getAttribute('data-id'));
+          if (index !== -1) {
+            historicoPedidos[index].status = "Cancelado";
+            itensCancelados.push({ numPedido: historicoPedidos[index].numPedido, row: historicoPedidos[index].id });
+          }
+        });
+        if (itensCancelados.length) enviarAcao({ action: 'cancelar', itens: itensCancelados });
+        localStorage.setItem('topfish_historico', JSON.stringify(historicoPedidos));
+        renderizarHistorico();
+        mostrarToast(`🗑️ Pedidos cancelados com sucesso!`);
+      }
+    }
+
+    function limparFormulario() {
+      document.getElementById('editPedidoId').value = '';
+      document.getElementById('rawWhatsappText').value = '';
+      document.getElementById('inputBuscaCliente').value = '';
+      document.getElementById('numPedido').value = '';
+      setHojeData();
+      gerarNumPedido();
+      document.getElementById('clienteNomeFantasia').value = '';
+      document.getElementById('clienteRazaoSocial').value = '';
+      document.getElementById('clienteCNPJ').value = '';
+      document.getElementById('clienteEndereco').value = '';
+      document.getElementById('dataEntrega').value = '';
+      document.getElementById('horarioRecebimento').value = '';
+      document.getElementById('prazoPagamento').value = '';
+      document.getElementById('observacoes').value = '';
+      document.getElementById('regraComissao').value = 'auto';
+      document.getElementById('formTitle').innerText = "Dados do Cliente & Controle";
+      document.getElementById('btnCancelarEdit').style.display = "none";
+      atualizarPrecoTabela();
+    }
+
+    function toggleSelectAll(master) {
+      document.querySelectorAll('.pedido-checkbox').forEach(cb => cb.checked = master.checked);
+    }
+
+    function copiarSelecionadosWhatsApp() {
+      const checkboxes = document.querySelectorAll('.pedido-checkbox:checked');
+      if (checkboxes.length === 0) return alert("Selecione pelo menos um pedido.");
+      let mensagens = [];
+      checkboxes.forEach(cb => {
+        const p = historicoPedidos.find(x => x.id == cb.getAttribute('data-id'));
+        if (p) mensagens.push(gerarTextoWhatsAppUnico(p));
+      });
+      navigator.clipboard.writeText(mensagens.join("\n\n-----------------------------------\n\n")).then(() => {
+        mostrarToast(`📋 Pedidos copiados!`);
+      });
+    }
+
+    function renderizarHistorico() {
+      const div = document.getElementById('listaHistorico');
+      if (!div) return;
+      div.innerHTML = '';
+
+      const busca = (document.getElementById('searchHist')?.value || '').toLowerCase();
+      const tipoFiltro = document.getElementById('filterTipo')?.value || 'todos';
+      const produtoFiltro = document.getElementById('filterProduto')?.value || 'todos';
+
+      const pedidosFiltrados = historicoPedidos.filter(item => {
+        if (item.status === "Cancelado") return false;
+        const texto = `${item.numPedido || ''} ${item.nomeFantasia || ''} ${item.cnpj || ''} ${item.nomeProduto || ''}`.toLowerCase();
+        const matchBusca = texto.includes(busca);
+        const isBonif = item.regraComissao === 'bonificacao';
+        let matchTipo = (tipoFiltro === 'todos') || (tipoFiltro === 'venda' ? !isBonif : isBonif);
+        let matchProduto = (produtoFiltro === 'todos') || (item.codProduto == produtoFiltro);
+        return matchBusca && matchTipo && matchProduto;
+      });
+
+      let qtdAtivos = 0, totalVendasAtivas = 0, comissaoTotalAtiva = 0;
+      historicoPedidos.forEach(p => {
+        if (p && p.status !== "Cancelado") {
+          qtdAtivos++;
+          totalVendasAtivas += (p.total || 0);
+          comissaoTotalAtiva += (p.comissao || 0);
+        }
+      });
+
+      document.getElementById('dashQtd').innerText = qtdAtivos;
+      document.getElementById('dashVendas').innerText = totalVendasAtivas.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+      const elComissao = document.getElementById('dashComissao');
+      elComissao.innerText = comissaoTotalAtiva.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+      elComissao.style.color = comissaoTotalAtiva >= 0 ? 'var(--success)' : 'var(--danger)';
+
+      if (pedidosFiltrados.length === 0) {
+        div.innerHTML = '<p style="text-align:center; color:#64748b; padding: 20px;">Nenhum pedido ativo cadastrado.</p>';
+        return;
+      }
+
+      pedidosFiltrados.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'history-card';
+        const isBonif = item.regraComissao === 'bonificacao';
+        card.innerHTML = `
+          <div class="history-card-top">
+            <input type="checkbox" class="pedido-checkbox" data-id="${item.id}">
+            <div class="history-card-content">
+              <div class="header-info">
+                <span>${esc(item.numPedido)} - ${esc(item.nomeFantasia)} ${isBonif ? ' [🎁 BONIFICAÇÃO]' : ''}</span>
+                <span style="color: var(--primary);">R$ ${(item.total || 0).toFixed(2)}</span>
+              </div>
+              <div class="details">
+                <strong>Data:</strong> ${formatarData(item.dataLancamento)} | <strong>CNPJ:</strong> ${esc(item.cnpj || 'N/I')} | <strong>Produto:</strong> ${item.qtdKg ? esc(item.qtdKg) + 'kg ' : ''}${esc(item.nomeProduto || 'N/I')}<br>
+                <strong>Comissão Total:</strong> <span style="color: var(--success); font-weight: bold;">R$ ${(item.comissao || 0).toFixed(2)}</span>
+                <br><strong>Prazo:</strong> ${esc(item.prazo || 'N/I')} | <strong>Endereço:</strong> ${esc(item.endereco || 'N/I')} | <strong>Horário:</strong> ${esc(item.horario || 'N/I')}
+              </div>
+              <div class="card-actions">
+                <button class="btn-action copy" onclick="copiarTextoUnicoDireto(${item.id})">📋 Copiar</button>
+                <button class="btn-action duplicar" onclick="duplicarPedido(${item.id})">📄 Duplicar</button>
+                <button class="btn-action edit" onclick="editarPedido(${item.id})">✏️ Editar</button>
+                <button class="btn-action delete" onclick="excluirPedido(${item.id})">🗑️ Cancelar</button>
+              </div>
+            </div>
+          </div>
+        `;
+        div.appendChild(card);
+      });
+    }
+
+    function copiarTextoUnicoDireto(id) {
+      const p = historicoPedidos.find(x => x.id == id);
+      if (p) navigator.clipboard.writeText(gerarTextoWhatsAppUnico(p)).then(() => mostrarToast("📋 Pedido copiado!"));
+    }
+
+    function mostrarToast(msg) {
+      const toast = document.getElementById("toast");
+      toast.innerText = msg;
+      toast.className = "show";
+      setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 3000);
+    }
+
+    setHojeData();
+    gerarNumPedido();
+    calcularValores(false);
+    sincronizarHistoricoNuvem();
+  </script>
+</body>
+</html>
